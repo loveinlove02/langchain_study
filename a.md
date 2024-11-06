@@ -1,12 +1,23 @@
 ```python
 import streamlit as st
 from langchain_core.messages import ChatMessage
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+
+from dotenv import load_dotenv
+import os
+
+load_dotenv(verbose=True)
+key = os.getenv('OPENAI_API_KEY')
+
 
 st.title('챗봇 만들기')
 
 if 'messages' not in st.session_state:
     st.session_state['messages'] = []
-    st.write('처음 한 번은 만들어 짐')
+
 
 # 새로운 메시지를 추가
 def add_message(role, message):
@@ -31,5 +42,4 @@ if user_input:
         st.write(user_input) 
 
     add_message('user', user_input)
-
 ```
