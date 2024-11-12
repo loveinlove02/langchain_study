@@ -32,6 +32,26 @@ def print_message():
         with st.chat_message(chat_message.role):
             st.write(chat_message.content) 
 
+# 체인을 생성
+def create_chain():
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ('system', '당신은 친절한 AI 어시스턴스입니다.'), 
+            ('user', '#Question:\n{question}')
+        ]
+    )
+
+    llm = ChatOpenAI(
+        api_key=key, 
+        model_name = 'gpt-4o-mini'
+    )
+
+    output_parser = StrOutputParser()
+
+    chain = prompt | llm | output_parser
+    
+    return chain
+
 # 메시지 출력
 print_message()
 
@@ -41,5 +61,15 @@ if user_input:
     with st.chat_message('user'):
         st.write(user_input) 
 
+
+    # 체인 함수를 실행 해서 chain 얻기
+    chain = create_chain()
+    answer = chain.invoke({'question': user_input})
+
+    # 화면에 답변 출력
+    with st.chat_message('assistant'):
+        st.write(answer)
+
     add_message('user', user_input)
+    add_message('assistant', answer)
 ```
