@@ -50,7 +50,7 @@ def print_message():
         with st.chat_message(chat_message.role):
             st.write(chat_message.content) 
 
-
+@st.cache_resource(show_spinner='업로한 파일을 처리 중입니다...')
 def embed_file(file):
     file_content = file.read()
     file_path = f'./.cache/files/{file.name}'
@@ -59,20 +59,34 @@ def embed_file(file):
 
 
     # 1. 문서를 로더를 사용해서 로드
+    loader = PyMuPDFLoader(file_path)
+    docs = loader.load()
 
     # 2. 문서를 분할
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000, chunk_overlap=50
+    )
+    split_documents = text_splitter.split_documents(docs)
 
     # 3. 임베딩을 생성
+    embeddings = OpenAIEmbeddings()
 
     # 4. 벡터 DB 생성하고 문서를 저장
+    vectorstore = FAISS.from_documents(
+        documents=split_documents, embedding=embeddings
+    )
+
 
     # 5. 질문과 비슷한 내용의 문단을 검색할 수 있는 검색기를 만든다
+    retriever = vectorstore.as_retriever()
 
-    # 6. 5번에 만들어진 검색기를 리턴한다.
+    return retriever
     
 
 if upload_file:
     retriever = embed_file(upload_file)
+    st.write(retriever)
+    
 
 # 메시지 출력
 print_message()
