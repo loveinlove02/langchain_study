@@ -12,28 +12,24 @@ import os
 load_dotenv(verbose=True)
 key = os.getenv('OPENAI_API_KEY')
 
-# 캐시 디렉토리를 생성
 if not os.path.exists('.cache'):
     os.mkdir('.cache')
 
 if not os.path.exists('.cache/files'):
-    os.mkdir('.cache/files')    
+    os.mkdir('.cache/files')
 
 if not os.path.exists('.cache/embeddings'):
-    os.mkdir('.cache//embeddings') 
-
+    os.mkdir('.cache/embeddings')
 
 st.title('챗봇 만들기')
 
 if 'messages' not in st.session_state:
     st.session_state['messages'] = []
 
-if 'chain' not in st.session_state:
-    st.session_state['chain'] = None
 
 with st.sidebar:
     upload_file = st.file_uploader('파일 업로드', type=['pdf'])
-    selected_prompt = 'prompts/pdf-rag.yaml'
+    select_prompt = 'prompts/pdf-rag.yaml'
 
 
 # 새로운 메시지를 추가
@@ -41,6 +37,7 @@ def add_message(role, message):
     st.session_state['messages'].append(
         ChatMessage(role=role, content=message)
     )
+
 
 # 저장된 메시지를 출력
 def print_message():
@@ -50,11 +47,20 @@ def print_message():
 
 
 def embed_file(file):
-    file_content = file.read()
+    pass
 
 
-
-# 파일을 업로드 했으면
 if upload_file:
     retriever = embed_file(upload_file)
+
+# 메시지 출력
+print_message()
+
+user_input = st.chat_input('궁금한 내용을 물어보세요')
+
+if user_input:
+    with st.chat_message('user'):
+        st.write(user_input) 
+
+    add_message('user', user_input)
 ```
