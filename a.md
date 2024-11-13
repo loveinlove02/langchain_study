@@ -4,6 +4,11 @@ from langchain_core.messages import ChatMessage
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_core.runnables import RunnablePassthrough
 
 
 from dotenv import load_dotenv
@@ -47,8 +52,24 @@ def print_message():
 
 
 def embed_file(file):
-    pass
+    file_content = file.read()
+    file_path = f'./.cache/files/{file.name}'
+    with open(file_path, 'wb') as f:
+        f.write(file_content)
 
+
+    # 1. 문서를 로더를 사용해서 로드
+
+    # 2. 문서를 분할
+
+    # 3. 임베딩을 생성
+
+    # 4. 벡터 DB 생성하고 문서를 저장
+
+    # 5. 질문과 비슷한 내용의 문단을 검색할 수 있는 검색기를 만든다
+
+    # 6. 5번에 만들어진 검색기를 리턴한다.
+    
 
 if upload_file:
     retriever = embed_file(upload_file)
