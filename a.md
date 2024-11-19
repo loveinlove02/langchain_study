@@ -1,164 +1,21 @@
 ```python
-import streamlit as st
-from langchain_core.messages import ChatMessage
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_community.document_loaders import PyMuPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.prompts import PromptTemplate
+email_conversation = """From: 김철수 (chulsoo.kim@bikecorporation.me)
+To: 이은채 (eunchae@teddyinternational.me)
+Subject: "ZENESIS" 자전거 유통 협력 및 미팅 일정 제안
 
-from dotenv import load_dotenv
-import os
+안녕하세요, 이은채 대리님,
 
-load_dotenv(verbose=True)
-key = os.getenv('OPENAI_API_KEY')
+저는 바이크코퍼레이션의 김철수 상무입니다. 최근 보도자료를 통해 귀사의 신규 자전거 "ZENESIS"에 대해 알게 되었습니다. 바이크코퍼레이션은 자전거 제조 및 유통 분야에서 혁신과 품질을 선도하는 기업으로, 이 분야에서의 장기적인 경험과 전문성을 가지고 있습니다.
 
-# 캐시 디렉토리를 생성
-if not os.path.exists('.cache'):
-    os.mkdir('.cache')
+ZENESIS 모델에 대한 상세한 브로슈어를 요청드립니다. 특히 기술 사양, 배터리 성능, 그리고 디자인 측면에 대한 정보가 필요합니다. 이를 통해 저희가 제안할 유통 전략과 마케팅 계획을 보다 구체화할 수 있을 것입니다.
 
-if not os.path.exists('.cache/files'):
-    os.mkdir('.cache/files')    
+또한, 협력 가능성을 더 깊이 논의하기 위해 다음 주 화요일(1월 15일) 오전 10시에 미팅을 제안합니다. 귀사 사무실에서 만나 이야기를 나눌 수 있을까요?
 
-if not os.path.exists('.cache/embeddings'):
-    os.mkdir('.cache/embeddings') 
+감사합니다.
 
-
-st.title('챗봇 만들기')
-
-if 'messages' not in st.session_state:
-    st.session_state['messages'] = []
-
-if 'chain' not in st.session_state:
-    st.session_state['chain'] = None
-
-with st.sidebar:
-    upload_file = st.file_uploader('파일 업로드', type=['pdf'])
-    selected_prompt = 'prompts/pdf-rag.yaml'
-
-
-# 새로운 메시지를 추가
-def add_message(role, message):
-    st.session_state['messages'].append(
-        ChatMessage(role=role, content=message)
-    )
-
-# 저장된 메시지를 출력
-def print_message():
-    for chat_message in st.session_state['messages']:
-        with st.chat_message(chat_message.role):
-            st.write(chat_message.content) 
-
-
-@st.cache_resource(show_spinner='업로드한 파일을 처리 중입니다...')
-def embed_file(file):      
-    file_content = file.read()
-    file_path = f'./.cache/files/{file.name}'
-    with open(file_path, 'wb') as f:
-        f.write(file_content)
-
-    # 1. 문서로드
-    loader = PyMuPDFLoader(file_path)
-    docs = loader.load()
+김철수
+상무이사
+바이크코퍼레이션
+"""
     
-    # 2. 문서 분할
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000, chunk_overlap=50
-    )
-
-    split_documents = text_splitter.split_documents(docs)
-
-    # 3. 임베딩기 생성
-    embeddings = OpenAIEmbeddings()
-
-    # 4. 벡터 데이터베이스(faiss) 생성 및 저장
-    vectorstore = FAISS.from_documents(
-        documents=split_documents, embedding=embeddings
-    )
-
-    # 5. 검색기(retriever) 생성
-    retriever = vectorstore.as_retriever()
-    
-    return retriever
-
-
-def create_chain(retriever):
-    
-    prompt = PromptTemplate.from_template(
-        """You are an assistant for question-answering tasks. 
-    Use the following pieces of retrieved context to answer the question. 
-    If you don't know the answer, just say that you don't know. 
-    Answer in Korean.
-
-    #Question: 
-    {question} 
-    #Context: 
-    {context} 
-
-    #Answer:"""
-    )
-
-    # 단계 7: 언어모델(LLM) 생성
-    # 모델(LLM) 을 생성합니다.
-    llm = ChatOpenAI(
-        api_key=key, 
-        model_name='gpt-4o-mini',
-        temperature=0,			    
-        max_tokens=2048,			
-    )
-
-    # 단계 8: 체인(Chain) 생성
-    chain = (
-        {"context": retriever, "question": RunnablePassthrough()}  #  itemgetter('question')
-        | prompt
-        | llm
-        | StrOutputParser()
-    )
-
-    return chain
-
-# 파일을 업로드 했으면
-if upload_file:                             
-    retriever = embed_file(upload_file)     # 파일이 업로드되면 retriever 
-    chain = create_chain(retriever)         # retriever를 인자로 넘겨서 체인
-    st.session_state['chain'] = chain       # session_state에 체인을 등록
-
-
-# 저장된 대화를 화면에 출력
-print_message()
-
-# 사용자 질문입력
-user_input = st.chat_input('궁금한 내용을 물어보세요')
-
-# 빈 공간
-warring_msg = st.empty()
-
-if user_input:      # 입력했으면
-    # session_state에 등록시킨 체인을 가져온다
-    chain = st.session_state['chain']
-
-    # 체인을 가져왔으면
-    if chain is not None:
-        with st.chat_message('user'):
-            st.write(user_input)
-
-        response = chain.stream(user_input)
-
-        with st.chat_message('assistant'):
-            container = st.empty()
-            answer = ''
-
-            for token in response:
-                answer = answer + token
-                container.markdown(answer)
-
-        add_message('user', user_input)
-        add_message('user', answer)
-    else:
-        warring_msg.error('실패')
-
 ```
