@@ -9,6 +9,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.runnables import RunnablePassthrough
+from langchain_core.prompts import PromptTemplate
 
 from dotenv import load_dotenv
 import os
@@ -85,8 +86,48 @@ def embed_file(file):
     return retriever
 
 
+def create_chain(retriever):
+    # 단계 6: 프롬프트 생성(Create Prompt)
+    # 프롬프트를 생성합니다.
+    prompt = PromptTemplate.from_template(
+        """You are an assistant for question-answering tasks. 
+    Use the following pieces of retrieved context to answer the question. 
+    If you don't know the answer, just say that you don't know. 
+    Answer in Korean.
+
+    #Question: 
+    {question} 
+    #Context: 
+    {context} 
+
+    #Answer:"""
+    )
+
+    # 단계 7: 언어모델(LLM) 생성
+    # 모델(LLM) 을 생성합니다.
+    llm = ChatOpenAI(
+        api_key=key, 
+        model_name='gpt-4o-mini',
+        temperature=0,			    
+        max_tokens=2048,			
+    )
+
+    # 단계 8: 체인(Chain) 생성
+    chain = (
+        {"context": retriever, "question": RunnablePassthrough()}  #  itemgetter('question')
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
+
+    return chain
+
 # 파일을 업로드 했으면
-if upload_file:
-    retriever = embed_file(upload_file)
-    st.write(retriever)
+if upload_file:                             
+    retriever = embed_file(upload_file)     # 파일이 업로드되면 retriever 
+    chain = create_chain(retriever)         # retriever를 인자로 넘겨서 체인
+    st.write(chain)
+    st.session_state['chain'] = chain       # session_state에 체인을 등록
+
+    
 ```
