@@ -159,8 +159,6 @@ if user_input:      # 입력했으면
         add_message('user', user_input)
         add_message('user', answer)
     else:
-        warring_msg.error('실패')    
+        warring_msg.error('실패')
 
-
-    
 ```
