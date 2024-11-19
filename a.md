@@ -87,8 +87,7 @@ def embed_file(file):
 
 
 def create_chain(retriever):
-    # 단계 6: 프롬프트 생성(Create Prompt)
-    # 프롬프트를 생성합니다.
+    
     prompt = PromptTemplate.from_template(
         """You are an assistant for question-answering tasks. 
     Use the following pieces of retrieved context to answer the question. 
@@ -126,8 +125,42 @@ def create_chain(retriever):
 if upload_file:                             
     retriever = embed_file(upload_file)     # 파일이 업로드되면 retriever 
     chain = create_chain(retriever)         # retriever를 인자로 넘겨서 체인
-    st.write(chain)
     st.session_state['chain'] = chain       # session_state에 체인을 등록
+
+
+# 저장된 대화를 화면에 출력
+print_message()
+
+# 사용자 질문입력
+user_input = st.chat_input('궁금한 내용을 물어보세요')
+
+# 빈 공간
+warring_msg = st.empty()
+
+if user_input:      # 입력했으면
+    # session_state에 등록시킨 체인을 가져온다
+    chain = st.session_state['chain']
+
+    # 체인을 가져왔으면
+    if chain is not None:
+        with st.chat_message('user'):
+            st.write(user_input)
+
+        response = chain.stream(user_input)
+
+        with st.chat_message('assistant'):
+            container = st.empty()
+            answer = ''
+
+            for token in response:
+                answer = answer + token
+                container.markdown(answer)
+
+        add_message('user', user_input)
+        add_message('user', answer)
+    else:
+        warring_msg.error('실패')    
+
 
     
 ```
