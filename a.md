@@ -1,5 +1,17 @@
 ```python
-email_conversation = """From: 김철수 (chulsoo.kim@bikecorporation.me)
+from dotenv import load_dotenv
+import os
+
+load_dotenv(verbose=True)
+key = os.getenv('OPENAI_API_KEY')
+
+
+from langchain_openai import ChatOpenAI
+from langchain_core.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
+from langchain_core.prompts import PromptTemplate
+
+email = """From: 김철수 (chulsoo.kim@bikecorporation.me)
 To: 이은채 (eunchae@teddyinternational.me)
 Subject: "ZENESIS" 자전거 유통 협력 및 미팅 일정 제안
 
@@ -17,5 +29,52 @@ ZENESIS 모델에 대한 상세한 브로슈어를 요청드립니다. 특히 �
 상무이사
 바이크코퍼레이션
 """
+
+class EmailSummary(BaseModel):
+    person: str = Field(description='메일을 보낸 사람')
+    email: str = Field(description='메일을 보낸 사람의 이메일 주소')
+    subject: str = Field(description='메일 제목')
+    summary: str = Field(description='메일 본문을 요약한 텍스트')
+    date: str = Field(description='메일 본문에 언급된 미팅 날짜와 시간')
+
+parser = PydanticOutputParser(pydantic_object=EmailSummary)  
+
+prompt = PromptTemplate.from_template(
+    """Yor are a helpful assistant. Please answer following questions in KOREAN.
+
+    QUESTION:
+    {question}
+
+    EMAIL CONVERSATION:
+    {email_conversation}
+
+    FORMAT:
+    {format}                                                                          
+""")
+
+prompt = prompt.partial(format=parser.get_format_instructions())
+
+llm = ChatOpenAI(
+    api_key=key,
+    model_name='gpt-4o-mini'
+)
+
+chain = prompt | llm
+
+response = chain.invoke(
+    {
+        'email_conversation' : email,
+        'question' : '이메일 내용중 주요 내용을 추출해 주세요.'
+    }
+)
+
+
+a = parser.parse(response.content)
+print(a.person)
+print(a.email)
+print(a.subject)
+print(a.summary)
+print(a.date)
+
     
 ```
